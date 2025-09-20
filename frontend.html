@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JobVista Pro - Find Your Perfect Job</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">JobVista Pro</div>
+            <div class="tagline">Compare jobs, find your perfect match</div>
+        </header>
+
+        <div class="search-section">
+            <div class="search-grid">
+                <div class="form-group">
+                    <label for="job-title">Job Title</label>
+                    <input type="text" id="job-title" placeholder="e.g. Software Engineer">
+                </div>
+                <div class="form-group">
+                    <label for="location">Location</label>
+                    <input type="text" id="location" placeholder="e.g. New York">
+                </div>
+                <div class="form-group">
+                    <label for="experience">Experience</label>
+                    <select id="experience">
+                        <option value="">Any Experience</option>
+                        <option value="entry">Entry Level</option>
+                        <option value="mid">Mid Level</option>
+                        <option value="senior">Senior Level</option>
+                        <option value="lead">Lead/Principal</option>
+                    </select>
+                </div>
+                <button class="search-btn" onclick="searchJobs()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 0 0 1.48-5.34c-.47-2.78-2.79-5-5.59-5.34a6.505 6.505 0 0 0-7.27 7.27c.34 2.8 2.56 5.12 5.34 5.59a6.5 6.5 0 0 0 5.34-1.48l.27.28v.79l4.25 4.25c.41.41 1.08.41 1.49 0 .41-.41.41-1.08 0-1.49L15.5 14zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                    </svg>
+                    Search
+                </button>
+            </div>
+
+            <div class="filters">
+                <div class="filter-chip" onclick="toggleFilter(this, 'remote')">Remote</div>
+                <div class="filter-chip" onclick="toggleFilter(this, 'fulltime')">Full-time</div>
+                <div class="filter-chip" onclick="toggleFilter(this, 'contract')">Contract</div>
+                <div class="filter-chip" onclick="toggleFilter(this, 'startup')">Startup</div>
+                <div class="filter-chip" onclick="toggleFilter(this, 'benefits')">Great Benefits</div>
+            </div>
+        </div>
+
+        <div class="results-section">
+            <div class="results-header">
+                <div class="results-count">Found <span id="job-count">0</span> jobs</div>
+                <select class="sort-select" id="sort-by" onchange="sortJobs()">
+                    <option value="relevance">Sort by Relevance</option>
+                    <option value="salary-high">Salary: High to Low</option>
+                    <option value="salary-low">Salary: Low to High</option>
+                    <option value="date">Most Recent</option>
+                    <option value="company">Company A-Z</option>
+                </select>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Searching for jobs...</p>
+            </div>
+
+            <div class="job-grid" id="job-results">
+                <!-- Job cards will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <button class="compare-btn" onclick="toggleComparison()">
+        Compare (<span id="compare-count">0</span>)
+    </button>
+
+    <div class="comparison-panel" id="comparison-panel">
+        <h3>Job Comparison</h3>
+        <div id="comparison-content">
+            <p>Select jobs to compare them side by side</p>
+        </div>
+    </div>
+
+    <script>
+        let jobsData = [];
+        let selectedJobs = [];
+        let activeFilters = [];
+
+        // Sample job data (in real app, this would come from backend)
+        const sampleJobs = [
+            {
+                id: 1,
+                title: "Senior Software Engineer",
+                company: "META",
+                location: "Bengaluru, KL",
+                salary: "$120,000 - $180,000",
+                experience: "senior",
+                type: "fulltime",
+                remote: true,
+                tags: ["Python", "React", "AWS", "Machine Learning"],
+                posted: "2024-08-10",
+                description: "Join our innovative team building next-gen AI solutions.",
+                benefits: ["Health Insurance", "401k", "Stock Options", "Unlimited PTO"]
+            },
+            {
+                id: 2,
+                title: "Frontend Developer",
+                company: "GOOGLE",
+                location: "New Delhi, Dl",
+                salary: "$90,000 - $130,000",
+                experience: "mid",
+                type: "fulltime",
+                remote: false,
+                tags: ["JavaScript", "Vue.js", "CSS", "Node.js"],
+                posted: "2024-08-12",
+                description: "Build beautiful, responsive web applications.",
+                benefits: ["Health Insurance", "Flexible Hours", "Learning Budget"]
+            },
+            {
+                id: 3,
+                title: "DevOps Engineer",
+                company: "MICROSOFT",
+                location: "Chennai, TN",
+                salary: "$100,000 - $150,000",
+                experience: "mid",
+                type: "contract",
+                remote: true,
+                tags: ["Docker", "Kubernetes", "CI/CD", "Terraform"],
+                posted: "2024-08-11",
+                description: "Manage cloud infrastructure and deployment pipelines.",
+                benefits: ["High Hourly Rate", "Flexible Schedule"]
+            }
+        ];
+
+        function searchJobs() {
+            const title = document.getElementById('job-title').value;
+            const location = document.getElementById('location').value;
+            const experience = document.getElementById('experience').value;
+            
+            showLoading();
+            
+            // Simulate API call
+            setTimeout(() => {
+                jobsData = filterJobs(sampleJobs, title, location, experience);
+                displayJobs(jobsData);
+                hideLoading();
+            }, 1000);
+        }
+
+        function filterJobs(jobs, title, location, experience) {
+            return jobs.filter(job => {
+                const titleMatch = !title || job.title.toLowerCase().includes(title.toLowerCase());
+                const locationMatch = !location || job.location.toLowerCase().includes(location.toLowerCase());
+                const experienceMatch = !experience || job.experience === experience;
+                const filtersMatch = activeFilters.every(filter => 
+                    job[filter] === true || job.tags.some(tag => tag.toLowerCase().includes(filter))
+                );
+                
+                return titleMatch && locationMatch && experienceMatch && filtersMatch;
+            });
+        }
+
+        function displayJobs(jobs) {
+            const container = document.getElementById('job-results');
+            const countElement = document.getElementById('job-count');
+            
+            countElement.textContent = jobs.length;
+            
+            if (jobs.length === 0) {
+                container.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">No jobs found. Try adjusting your search criteria.</p>';
+                return;
+            }
+            
+            container.innerHTML = jobs.map(job => createJobCard(job)).join('');
+        }
+
+        function createJobCard(job) {
+            const isSelected = selectedJobs.some(j => j.id === job.id);
+            return `
+                <div class="job-card" data-job-id="${job.id}">
+                    <div class="job-header">
+                        <div>
+                            <div class="job-title">${job.title}</div>
+                            <div class="company-name">${job.company}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="job-meta">
+                        <div class="meta-item">
+                            <svg class="meta-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                            </svg>
+                            ${job.location}
+                        </div>
+                        <div class="meta-item">
+                            <svg class="meta-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                            </svg>
+                            ${job.experience} level
+                        </div>
+                        ${job.remote ? '<div class="meta-item">🏠 Remote</div>' : ''}
+                    </div>
+                    
+                    <div class="salary">${job.salary}</div>
+                    
+                    <div class="job-tags">
+                        ${job.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                    </div>
+                    
+                    <p style="color: #666; font-size: 14px; margin: 10px 0;">${job.description}</p>
+                    
+                    <div class="job-actions">
+                        <button class="btn btn-primary" onclick="applyJob(${job.id})">Apply Now</button>
+                        <button class="btn btn-secondary ${isSelected ? 'active' : ''}" onclick="toggleJobSelection(${job.id})">
+                            ${isSelected ? 'Remove from Compare' : 'Compare'}
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleFilter(element, filter) {
+            element.classList.toggle('active');
+            
+            if (activeFilters.includes(filter)) {
+                activeFilters = activeFilters.filter(f => f !== filter);
+            } else {
+                activeFilters.push(filter);
+            }
+            
+            // Re-search with new filters
+            if (jobsData.length > 0) {
+                searchJobs();
+            }
+        }
+
+        function toggleJobSelection(jobId) {
+            const job = sampleJobs.find(j => j.id === jobId);
+            const existingIndex = selectedJobs.findIndex(j => j.id === jobId);
+            
+            if (existingIndex > -1) {
+                selectedJobs.splice(existingIndex, 1);
+            } else {
+                if (selectedJobs.length < 3) {
+                    selectedJobs.push(job);
+                } else {
+                    alert('You can compare up to 3 jobs at a time.');
+                    return;
+                }
+            }
+            
+            updateCompareButton();
+            displayJobs(jobsData); // Refresh to update button states
+        }
+
+        function updateCompareButton() {
+            document.getElementById('compare-count').textContent = selectedJobs.length;
+        }
+
+        function toggleComparison() {
+            const panel = document.getElementById('comparison-panel');
+            panel.classList.toggle('active');
+            
+            if (panel.classList.contains('active')) {
+                displayComparison();
+            }
+        }
+
+        function displayComparison() {
+            const content = document.getElementById('comparison-content');
+            
+            if (selectedJobs.length === 0) {
+                content.innerHTML = '<p>Select jobs to compare them side by side</p>';
+                return;
+            }
+            
+            content.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    ${selectedJobs.map(job => `
+                        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                            <h4>${job.title}</h4>
+                            <p><strong>${job.company}</strong></p>
+                            <p><strong>Salary:</strong> ${job.salary}</p>
+                            <p><strong>Location:</strong> ${job.location}</p>
+                            <p><strong>Experience:</strong> ${job.experience}</p>
+                            <p><strong>Remote:</strong> ${job.remote ? 'Yes' : 'No'}</p>
+                            <p><strong>Skills:</strong> ${job.tags.join(', ')}</p>
+                            <button onclick="removeFromComparison(${job.id})" style="margin-top: 10px; padding: 5px 10px; background: #ff4757; color: white; border: none; border-radius: 4px;">Remove</button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function removeFromComparison(jobId) {
+            selectedJobs = selectedJobs.filter(j => j.id !== jobId);
+            updateCompareButton();
+            displayComparison();
+            displayJobs(jobsData); // Refresh job cards
+        }
+
+        function sortJobs() {
+            const sortBy = document.getElementById('sort-by').value;
+            
+            jobsData.sort((a, b) => {
+                switch(sortBy) {
+                    case 'salary-high':
+                        return parseInt(b.salary.replace(/[^0-9]/g, '')) - parseInt(a.salary.replace(/[^0-9]/g, ''));
+                    case 'salary-low':
+                        return parseInt(a.salary.replace(/[^0-9]/g, '')) - parseInt(b.salary.replace(/[^0-9]/g, ''));
+                    case 'date':
+                        return new Date(b.posted) - new Date(a.posted);
+                    case 'company':
+                        return a.company.localeCompare(b.company);
+                    default:
+                        return 0;
+                }
+            });
+            
+            displayJobs(jobsData);
+        }
+
+        function applyJob(jobId) {
+            alert(`Redirecting to application page for job ID: ${jobId}`);
+        }
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('job-results').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('job-results').style.display = 'grid';
+        }
+
+        // Initialize with sample data
+        window.addEventListener('load', () => {
+            jobsData = sampleJobs;
+            displayJobs(jobsData);
+        });
+    </script>
+</body>
+</html>
